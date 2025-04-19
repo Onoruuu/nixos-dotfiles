@@ -1,157 +1,123 @@
-{ config, pkgs, ... }:
+# Main home-manager configuration
+{ config, lib, pkgs, ... }:
 
+let
+  hostname = builtins.readFile "/etc/hostname";
+  isNitro = hostname == "nixabyss-nitro";
+  isLatitude = hostname == "nixabyss-latitude";
+  isInspiron = hostname == "nixabyss-inspiron";
+in
 {
+  imports = [
+    ./modules/nvim.nix
+  ] ++ (if isNitro then [ ./modules/hyprland-nitro.nix ]
+    else if isLatitude then [ ./modules/hyprland-intel.nix ]
+    else if isInspiron then [ ./modules/hyprland-intel.nix ]
+    else [ ./modules/hyprland-base.nix ]);
 
-  # TODO please change the username & home directory to your own
-  home.username = "aaron";
-  home.homeDirectory = "/home/aaron";
+  home = {
+    username = "aaron";
+    homeDirectory = "/home/aaron";
+    stateVersion = "24.11";
 
-  # link the configuration file in current directory to the specified location in home directory
-  # home.file.".config/i3/wallpaper.jpg".source = ./wallpaper.jpg;
-
-  # link all files in `./scripts` to `~/.config/i3/scripts`
-  # home.file.".config/i3/scripts" = {
-  #   source = ./scripts;
-  #   recursive = true;   # link recursively
-  #   executable = true;  # make all files executable
-  # };
-
-  # encode the file content in nix configuration file directly
-  # home.file.".xxx".text = ''
-  #     xxx
-  # '';
-
-  
-
-  # Packages that should be installed to the user profile.
-  home.packages = with pkgs; [
-    # here is some command line tools I use frequently
-    # feel free to add your own or remove some of them
-
-    vscode
-    brave
-    rmpc
-    
-    # archives
-    zip
-    xz
-    unzip
-
-    # utils
-    ripgrep # recursively searches directories for a regex pattern
-    jq # A lightweight and flexible command-line JSON processor
-    yq-go # yaml processor https://github.com/mikefarah/yq
-    eza # A modern replacement for ‘ls’
-   
-
-    # networking tools
-    mtr # A network diagnostic tool
-    iperf3
-    dnsutils  # `dig` + `nslookup`
-    ldns # replacement of `dig`, it provide the command `drill`
-    aria2 # A lightweight multi-protocol & multi-source command-line download utility
-    socat # replacement of openbsd-netcat
-    nmap # A utility for network discovery and security auditing
-    ipcalc  # it is a calculator for the IPv4/v6 addresses
-
-    # misc
-    cowsay
-    file
-    gnused
-    gnutar
-    gawk
-    zstd
-    gnupg
-
-    # nix related
-    #
-    # it provides the command `nom` works just like `nix`
-    # with more details log output
-    nix-output-monitor
-
-    # productivity
-    zola # static site generator
-    glow # markdown previewer in terminal
-
-    btop  # replacement of htop/nmon
-    iotop # io monitoring
-    iftop # network monitoring
-
-    # system call monitoring
-    strace # system call monitoring
-    ltrace # library call monitoring
-    lsof # list open files
-
-    # system tools
-    sysstat
-    lm_sensors # for `sensors` command
-    ethtool
-    pciutils # lspci
-    usbutils # lsusb
-  ];
-
-  # basic configuration of git, please change to your own
-  programs.git = {
-    enable = true;
-    userName = "joe biden";
-    userEmail = "Onoruuu@gmail.com";
+    packages = with pkgs; [
+      # Development
+      git
+      gh
+      gnumake
+      rustup
+      gcc
+      python3
+      nodejs
+      
+      # Terminal utilities
+      kitty
+      zsh
+      starship
+      exa
+      bat
+      ripgrep
+      fd
+      fzf
+      btop
+      tmux
+      
+      # System tools
+      brightnessctl
+      playerctl
+      pamixer
+      grimblast
+      wl-clipboard
+      
+      # Applications
+      firefox
+      vlc
+      libreoffice
+      zathura
+      discord
+      spotify
+    ];
   };
 
-   programs.bash = {
+  # Shell configuration
+  programs.zsh = {
     enable = true;
-    enableCompletion = true;
-    # TODO add your custom bashrc here
-    bashrcExtra = ''
-      export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
-    '';
-
-    # set some aliases, feel free to add more or remove some
-    shellAliases = {
-      k = "kubectl";
-      urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
-      urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-      vim = "nvim";
+    enableAutosuggestions = true;
+    enableSyntaxHighlighting = true;
+    oh-my-zsh = {
+      enable = true;
+      plugins = [ "git" "docker" "rust" "npm" ];
     };
   };
 
-  # This value determines the home Manager release that your
-  # configuration is compatible with. This helps avoid breakage
-  # when a new home Manager release introduces backwards
-  # incompatible changes.
-  #
-  # You can update home Manager without changing this value. See
-  # the home Manager release notes for a list of state version
-  # changes in each release.
-  home.stateVersion = "24.11";
-
-  # Let home Manager install and manage itself.
-  programs.home-manager.enable = true;
-
-
-#################################
-
-  #HYPRLAND BABY (ACTUAL HYPRLAND PROGRAM IN ./configuration.nix)
-  programs.kitty.enable = true; # required for the default Hyprland config
-  #minimal config just to rule out issues
-   wayland.windowManager.hyprland.settings = {
-    "$mod" = "SUPER";
-    bind =
-      [
-        "$mod, F, exec, firefox"
-        ", Print, exec, grimblast copy area"
-      ]
-      ++ (
-        # workspaces
-        # binds $mod + [shift +] {1..9} to [move to] workspace {1..9}
-        builtins.concatLists (builtins.genList (i:
-            let ws = i + 1;
-            in [
-              "$mod, code:1${toString i}, workspace, ${toString ws}"
-              "$mod SHIFT, code:1${toString i}, movetoworkspace, ${toString ws}"
-            ]
-          )
-          9)
-      );
+  # Starship prompt
+  programs.starship = {
+    enable = true;
+    settings = {
+      add_newline = false;
+      character = {
+        success_symbol = "[➜](bold green)";
+        error_symbol = "[➜](bold red)";
+      };
+    };
   };
 
+  # Kitty terminal configuration
+  programs.kitty = {
+    enable = true;
+    settings = {
+      font_family = "JetBrains Mono";
+      font_size = 12;
+      background_opacity = "0.95";
+      confirm_os_window_close = 0;
+    };
+    theme = "Catppuccin-Mocha";
+  };
+
+  # Git configuration
+  programs.git = {
+    enable = true;
+    userName = "aaron";
+    userEmail = "your.email@example.com"; # Replace with your email
+    extraConfig = {
+      init.defaultBranch = "main";
+      pull.rebase = true;
+    };
+  };
+
+  # Allow unfree packages
+  nixpkgs.config.allowUnfree = true;
+
+  # Enable fonts
+  fonts.fontconfig.enable = true;
+
+  # Additional home-manager settings
+  home.sessionVariables = {
+    EDITOR = "nvim";
+    TERMINAL = "kitty";
+    BROWSER = "firefox";
+  };
+
+  # Let Home Manager manage itself
+  programs.home-manager.enable = true;
 }

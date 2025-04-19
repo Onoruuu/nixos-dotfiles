@@ -1,41 +1,68 @@
 {
-  description = "NixOS configuration";
+  description = "Aaron's NixOS configuration";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
-    # home-manager, used for managing user configuration
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
-      # The `follows` keyword in inputs is used for inheritance.
-      # Here, `inputs.nixpkgs` of home-manager is kept consistent with
-      # the `inputs.nixpkgs` of the current flake,
-      # to avoid problems caused by different versions of nixpkgs.
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    hyprland.url = "github:hyprwm/Hyprland";
   };
 
-  outputs = inputs@{ nixpkgs, home-manager, ... }: {
-    nixosConfigurations = {
-      # TODO please change the hostname to your own
-      nixabyss = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          ./configuration.nix
+  outputs = { self, nixpkgs, home-manager, hyprland, ... }@inputs:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      nixosConfigurations = {
+        # Acer Nitro 5 Configuration
+        nixabyss-nitro = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            ./hosts/acer-nitro.nix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.aaron = import ./home.nix;
+            }
+            hyprland.nixosModules.default
+            { programs.hyprland.enable = true; }
+          ];
+        };
 
-          # make home-manager as a module of nixos
-          # so that home-manager configuration will be deployed automatically when executing `nixos-rebuild switch`
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
+        # Dell Latitude Configuration
+        nixabyss-latitude = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            ./hosts/latitude.nix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.aaron = import ./home.nix;
+            }
+            hyprland.nixosModules.default
+            { programs.hyprland.enable = true; }
+          ];
+        };
 
-            # TODO replace ryan with your own username
-	     home-manager.users.aaron = import ./home.nix;
-
-            # Optionally, use home-manager.extraSpecialArgs to pass arguments to home.nix
-          }
-        ];
+        # Dell Inspiron Configuration
+        nixabyss-inspiron = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            ./hosts/inspiron.nix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.aaron = import ./home.nix;
+            }
+            hyprland.nixosModules.default
+            { programs.hyprland.enable = true; }
+          ];
+        };
       };
     };
-  };
 }
